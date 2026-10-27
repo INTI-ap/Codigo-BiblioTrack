@@ -1,0 +1,20 @@
+// lib/core/di/injection_container.dart
+import 'package:get_it/get_it.dart';
+import '../database/app_database.dart';
+import '../../features/books/data/repositories/book_repository_impl.dart';
+import '../../features/books/domain/repositories/book_repository.dart';
+
+final sl = GetIt.instance;
+
+Future<void> initDependencies() async {
+  // Infraestructura
+  sl.registerSingleton<AppDatabase>(AppDatabase());
+  sl.registerSingleton<BooksDao>(sl<AppDatabase>().booksDao);
+  sl.registerSingleton<LoansDao>(sl<AppDatabase>().loansDao);
+
+  // Repositorios
+  sl.registerLazySingleton<BookRepository>(
+    () => BookRepositoryImpl(sl<BooksDao>()),
+  );
+  // TODO P: Registrar LoanRepository → LoanRepositoryImpl(sl<LoansDao>(), sl<BooksDao>())
+}
