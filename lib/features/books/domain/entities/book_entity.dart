@@ -1,9 +1,4 @@
 // lib/features/books/domain/entities/book_entity.dart
-//
-// ══════════════════════════════════════════════════════
-//  ⚠️  IMPLEMENTACIÓN INCOMPLETA
-//      Completa los métodos marcados con // TODO
-// ══════════════════════════════════════════════════════
 import 'package:equatable/equatable.dart';
 
 class BookEntity extends Equatable {
@@ -27,38 +22,25 @@ class BookEntity extends Equatable {
     required this.addedAt,
   });
 
-  // ── Reglas de negocio ──────────────────────────────
+  // -- Reglas de negocio --
 
-  /// TODO A: Retorna true si el libro fue publicado hace más de 50 años.
-  /// Pista: usar DateTime.now().year - year > 50
-  bool get isClassic {
-    // TODO: implementar
-    throw UnimplementedError();
-  }
+  /// TODO A: Retorna true si el libro fue publicado hace mas de 50 anos.
+  bool get isClassic => DateTime.now().year - year > 50;
 
-  /// TODO B: Retorna una etiqueta de estado:
-  ///   - available == true  → "Disponible"
-  ///   - available == false → "Prestado"
-  String get statusLabel {
-    // TODO: implementar
-    throw UnimplementedError();
-  }
+  /// TODO B: Retorna "Disponible" si available es true, "Prestado" si es false.
+  String get statusLabel => available ? 'Disponible' : 'Prestado';
 
-  /// TODO C: Retorna el año como String con prefijo "Año: "
-  /// Ejemplo: "Año: 1984"
-  String get yearLabel {
-    // TODO: implementar
-    throw UnimplementedError();
-  }
+  /// TODO C: Retorna el ano como texto con prefijo "Ano: ". Ejemplo: "Ano: 1984"
+  String get yearLabel => 'Año: $year';
 
   @override
   List<Object?> get props =>
       [id, title, author, isbn, year, genre, available, addedAt];
 }
 
-// ─────────────────────────────────────────────────────
-// LoanEntity — entidad de préstamo
-// ─────────────────────────────────────────────────────
+// -------------------------------------------------
+// LoanEntity - entidad de prestamo
+// -------------------------------------------------
 class LoanEntity extends Equatable {
   final int      id;
   final int      bookId;
@@ -78,20 +60,14 @@ class LoanEntity extends Equatable {
     required this.status,
   });
 
-  // ── Reglas de negocio ──────────────────────────────
+  // -- Reglas de negocio --
 
-  /// TODO D: Retorna true si el préstamo está activo Y la fecha de devolución
-  /// esperada (dueDate) es anterior a hoy (está vencido).
-  bool get isOverdue {
-    // TODO: implementar
-    throw UnimplementedError();
-  }
+  /// TODO D: Retorna true si el prestamo esta activo y la fecha limite ya paso.
+  bool get isOverdue =>
+      status == 'active' && dueDate != null && dueDate!.isBefore(DateTime.now());
 
-  /// TODO E: Retorna true si el préstamo ya fue devuelto (returnDate != null).
-  bool get isReturned {
-    // TODO: implementar
-    throw UnimplementedError();
-  }
+  /// TODO E: Retorna true si el prestamo ya fue devuelto (returnDate no es null).
+  bool get isReturned => returnDate != null;
 
   @override
   List<Object?> get props =>
