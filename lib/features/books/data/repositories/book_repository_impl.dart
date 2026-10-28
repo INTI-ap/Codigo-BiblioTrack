@@ -1,9 +1,10 @@
 // lib/features/books/data/repositories/book_repository_impl.dart
 //
 // ══════════════════════════════════════════════════════
-//  ⚠️  IMPLEMENTACIÓN INCOMPLETA — completar los TODO
+//  Repositorios: validaciones y persistencia con Either
 // ══════════════════════════════════════════════════════
 import 'package:dartz/dartz.dart';
+import 'package:drift/drift.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/errors/failures.dart';
 import '../../domain/entities/book_entity.dart';
@@ -16,12 +17,14 @@ class BookRepositoryImpl implements BookRepository {
   BookRepositoryImpl(this._booksDao);
 
   @override
-  Stream<List<BookEntity>> watchAllBooks() =>
-      _booksDao.watchAllBooks().map((rows) => rows.map(BookModel.fromDrift).toList());
+  Stream<List<BookEntity>> watchAllBooks() => _booksDao
+      .watchAllBooks()
+      .map((rows) => rows.map(BookModel.fromDrift).toList());
 
   @override
-  Stream<List<BookEntity>> watchAvailableBooks() =>
-      _booksDao.watchAvailableBooks().map((rows) => rows.map(BookModel.fromDrift).toList());
+  Stream<List<BookEntity>> watchAvailableBooks() => _booksDao
+      .watchAvailableBooks()
+      .map((rows) => rows.map(BookModel.fromDrift).toList());
 
   @override
   Future<Either<Failure, List<BookEntity>>> getByGenre(String genre) async {
@@ -41,22 +44,50 @@ class BookRepositoryImpl implements BookRepository {
     required int year,
     required String genre,
   }) async {
-    // TODO F: Validar que title y author no estén vacíos.
-    //         Si alguno está vacío retornar:
-    //         Left(ValidationFailure('Título y autor son obligatorios'))
-    //         Si la validación pasa, insertar con _booksDao.insertBook(...)
-    //         y retornar Right(BookModel.fromDrift(...))
-    throw UnimplementedError('TODO F: implementar addBook con validación');
+    // Valida los campos obligatorios antes de guardar.
+    if (title.trim().isEmpty || author.trim().isEmpty) {
+      return const Left(ValidationFailure('Título y autor son obligatorios'));
+    }
+    try {
+      final id = await _booksDao.insertBook(BooksCompanion.insert(
+        title: title.trim(),
+        author: author.trim(),
+        isbn: Value(isbn),
+        year: Value(year),
+        genre: Value(genre),
+        addedAt: DateTime.now().millisecondsSinceEpoch,
+      ));
+      final row = (await _booksDao.getAllBooks()).firstWhere((b) => b.id == id);
+      return Right(BookModel.fromDrift(row));
+    } catch (e) {
+      return Left(DatabaseFailure(e.toString()));
+    }
   }
 
   @override
-  Future<Either<Failure, void>> updateBook(int id, {
-    String? title, String? author, String? isbn, int? year, String? genre,
+  Future<Either<Failure, void>> updateBook(
+    int id, {
+    String? title,
+    String? author,
+    String? isbn,
+    int? year,
+    String? genre,
   }) async {
-    // TODO G: Llamar _booksDao.updateBook(id, BooksCompanion(...)) con los
-    //         campos que no sean null usando Value(x) y los null como Value.absent().
-    //         Retornar Right(null) o Left(DatabaseFailure).
-    throw UnimplementedError('TODO G: implementar updateBook');
+    // Los campos nulos conservan su valor actual.
+    try {
+      await _booksDao.updateBook(
+          id,
+          BooksCompanion(
+            title: title == null ? const Value.absent() : Value(title),
+            author: author == null ? const Value.absent() : Value(author),
+            isbn: isbn == null ? const Value.absent() : Value(isbn),
+            year: year == null ? const Value.absent() : Value(year),
+            genre: genre == null ? const Value.absent() : Value(genre),
+          ));
+      return const Right(null);
+    } catch (e) {
+      return Left(DatabaseFailure(e.toString()));
+    }
   }
 
   @override
@@ -74,14 +105,15 @@ class BookRepositoryImpl implements BookRepository {
 // LoanRepositoryImpl
 // ─────────────────────────────────────────────────────
 class LoanRepositoryImpl implements LoanRepository {
-  final LoansDao  _loansDao;
-  final BooksDao  _booksDao;
+  final LoansDao _loansDao;
+  final BooksDao _booksDao;
 
   LoanRepositoryImpl(this._loansDao, this._booksDao);
 
   @override
-  Stream<List<LoanEntity>> watchAllLoans() =>
-      _loansDao.watchAllLoans().map((rows) => rows.map(LoanModel.fromDrift).toList());
+  Stream<List<LoanEntity>> watchAllLoans() => _loansDao
+      .watchAllLoans()
+      .map((rows) => rows.map(LoanModel.fromDrift).toList());
 
   @override
   Future<Either<Failure, List<LoanEntity>>> getActiveLoans() async {
@@ -99,18 +131,40 @@ class LoanRepositoryImpl implements LoanRepository {
     required String borrower,
     DateTime? dueDate,
   }) async {
-    // TODO H: 1. Validar que borrower no esté vacío.
-    //         2. Insertar préstamo con _loansDao.insertLoan(...)
-    //         3. Marcar el libro como NO disponible: _booksDao.setAvailability(bookId, false)
-    //         4. Retornar Right(LoanModel.fromDrift(nuevo préstamo))
-    throw UnimplementedError('TODO H: implementar createLoan');
+    if (borrower.trim().isEmpty) {
+      return const Left(
+          ValidationFailure('El nombre del prestatario es obligatorio'));
+    }
+    try {
+      // Guarda el prestamo y la disponibilidad en una misma transaccion.
+      return await _loansDao.attachedDatabase.transaction(() async {
+        final id = await _loansDao.insertLoan(LoansCompanion.insert(
+          bookId: bookId,
+          borrower: borrower.trim(),
+          loanDate: DateTime.now().millisecondsSinceEpoch,
+          dueDate: Value(dueDate?.millisecondsSinceEpoch),
+        ));
+        await _booksDao.setAvailability(bookId, false);
+        final row = (await _loansDao.getLoansByBook(bookId))
+            .firstWhere((l) => l.id == id);
+        return Right<Failure, LoanEntity>(LoanModel.fromDrift(row));
+      });
+    } catch (e) {
+      return Left(DatabaseFailure(e.toString()));
+    }
   }
 
   @override
   Future<Either<Failure, void>> returnBook(int loanId, int bookId) async {
-    // TODO I: 1. Llamar _loansDao.returnLoan(loanId)
-    //         2. Marcar el libro como disponible: _booksDao.setAvailability(bookId, true)
-    //         3. Retornar Right(null) o Left(DatabaseFailure)
-    throw UnimplementedError('TODO I: implementar returnBook');
+    try {
+      // La devolucion tambien vuelve a habilitar el libro.
+      await _loansDao.attachedDatabase.transaction(() async {
+        await _loansDao.returnLoan(loanId);
+        await _booksDao.setAvailability(bookId, true);
+      });
+      return const Right(null);
+    } catch (e) {
+      return Left(DatabaseFailure(e.toString()));
+    }
   }
 }
