@@ -16,19 +16,19 @@ class BooksPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // TODO Q: Cambiar a filteredBooksProvider para que el filtro funcione
-    final booksAsync = ref.watch(booksStreamProvider);
-    // TODO R: Obtener availableCountProvider para el subtítulo
+    final booksAsync = ref.watch(filteredBooksProvider);
+    final availableCount = ref.watch(availableCountProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F4EF),
       appBar: AppBar(
-        title: const Column(
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('BiblioTrack 📚', style: TextStyle(fontWeight: FontWeight.bold)),
-            // TODO R: Mostrar "N disponibles" usando availableCountProvider
-            Text('Mi biblioteca personal', style: TextStyle(fontSize: 12)),
+            const Text('BiblioTrack 📚',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('$availableCount disponibles',
+                style: const TextStyle(fontSize: 12)),
           ],
         ),
         backgroundColor: const Color(0xFF2C4A7C),
@@ -51,7 +51,8 @@ class BooksPage extends ConsumerWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                    const Icon(Icons.error_outline,
+                        color: Colors.red, size: 48),
                     const SizedBox(height: 8),
                     Text('Error: $e'),
                     TextButton(
@@ -70,7 +71,8 @@ class BooksPage extends ConsumerWidget {
                       children: [
                         Icon(Icons.menu_book, size: 64, color: Colors.grey),
                         SizedBox(height: 12),
-                        Text('No hay libros aún.\nAgrega el primero con el botón +',
+                        Text(
+                            'No hay libros aún.\nAgrega el primero con el botón +',
                             textAlign: TextAlign.center),
                       ],
                     ),

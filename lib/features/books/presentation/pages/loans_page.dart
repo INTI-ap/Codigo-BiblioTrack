@@ -1,5 +1,5 @@
 // lib/features/books/presentation/pages/loans_page.dart
-// ✅ SCAFFOLD COMPLETO — pantalla de préstamos (TODO S en el botón Devolver)
+// Pantalla de prestamos con devolucion conectada al controlador.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../controllers/books_controller.dart';
@@ -38,7 +38,8 @@ class LoansPage extends ConsumerWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.check_circle_outline, size: 64, color: Colors.green),
+                  Icon(Icons.check_circle_outline,
+                      size: 64, color: Colors.green),
                   SizedBox(height: 12),
                   Text('No hay préstamos activos 🎉'),
                 ],
@@ -54,9 +55,8 @@ class LoansPage extends ConsumerWidget {
                 margin: const EdgeInsets.only(bottom: 10),
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: loan.isOverdue
-                        ? Colors.red
-                        : const Color(0xFF2C4A7C),
+                    backgroundColor:
+                        loan.isOverdue ? Colors.red : const Color(0xFF2C4A7C),
                     child: const Icon(Icons.person, color: Colors.white),
                   ),
                   title: Text(loan.borrower,
@@ -65,8 +65,20 @@ class LoansPage extends ConsumerWidget {
                     'Libro #${loan.bookId} · ${loan.isOverdue ? "⚠️ VENCIDO" : "En plazo"}',
                   ),
                   trailing: TextButton(
-                    onPressed: () {
-                      // TODO S: Llamar loansControllerProvider.notifier.returnBook(loan.id, loan.bookId)
+                    onPressed: () async {
+                      try {
+                        await ref
+                            .read(loansControllerProvider.notifier)
+                            .returnBook(loan.id, loan.bookId);
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text('Error: $e'),
+                                backgroundColor: Colors.red),
+                          );
+                        }
+                      }
                     },
                     child: const Text('Devolver'),
                   ),
@@ -80,10 +92,9 @@ class LoansPage extends ConsumerWidget {
   }
 }
 
-
 // ─────────────────────────────────────────────────────
 // Diálogo de alta de préstamo — ✅ SCAFFOLD COMPLETO
-// El alta del préstamo se resuelve en LoansController.createLoan (TODO N).
+// El alta del prestamo se resuelve en LoansController.createLoan.
 // ─────────────────────────────────────────────────────
 class NewLoanDialog extends ConsumerStatefulWidget {
   const NewLoanDialog({super.key});
@@ -121,7 +132,8 @@ class _NewLoanDialogState extends ConsumerState<NewLoanDialog> {
           ),
           TextField(
             controller: _borrowerCtrl,
-            decoration: const InputDecoration(labelText: 'Prestado a (nombre) *'),
+            decoration:
+                const InputDecoration(labelText: 'Prestado a (nombre) *'),
           ),
         ]),
       ),
@@ -134,7 +146,8 @@ class _NewLoanDialogState extends ConsumerState<NewLoanDialog> {
           onPressed: _loading || _bookId == null ? null : _save,
           child: _loading
               ? const SizedBox(
-                  width: 18, height: 18,
+                  width: 18,
+                  height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2))
               : const Text('Prestar'),
         ),

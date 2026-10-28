@@ -16,5 +16,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton<BookRepository>(
     () => BookRepositoryImpl(sl<BooksDao>()),
   );
-  // TODO P: Registrar LoanRepository → LoanRepositoryImpl(sl<LoansDao>(), sl<BooksDao>())
+  sl.registerLazySingleton<LoanRepository>(
+    () => LoanRepositoryImpl(sl<LoansDao>(), sl<BooksDao>()),
+  );
 }

@@ -1,7 +1,7 @@
 // lib/features/books/presentation/controllers/books_controller.dart
 //
 // ══════════════════════════════════════════════════════
-//  ⚠️  IMPLEMENTACIÓN PARCIAL — completar los TODO
+//  Providers y controladores de libros y prestamos
 // ══════════════════════════════════════════════════════
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/book_entity.dart';
@@ -12,14 +12,13 @@ import '../../../../core/di/injection_container.dart';
 final selectedGenreProvider = StateProvider<String?>((ref) => null);
 
 // ── Provider: lista filtrada por género ───────────────
-// TODO J: Implementar filteredBooksProvider
-//   - Observar booksStreamProvider y selectedGenreProvider
-//   - Si genre == null → retornar todos
-//   - Si genre != null → filtrar donde book.genre == genre
-//   - Propagar loading/error sin modificar
+// Filtra los datos sin perder los estados de carga y error.
 final filteredBooksProvider = Provider<AsyncValue<List<BookEntity>>>((ref) {
-  // TODO: implementar — actualmente devuelve todos sin filtrar
-  return ref.watch(booksStreamProvider);
+  final books = ref.watch(booksStreamProvider);
+  final genre = ref.watch(selectedGenreProvider);
+  return books.whenData((items) => genre == null
+      ? items
+      : items.where((book) => book.genre == genre).toList());
 });
 
 // ── StreamProvider: stream reactivo desde Drift ───────
@@ -33,9 +32,9 @@ final availableBooksProvider = StreamProvider<List<BookEntity>>((ref) {
 });
 
 // ── Provider: conteo de libros disponibles ────────────
-// TODO K: Implementar availableCountProvider (Provider<int>)
-//   Derivado de availableBooksProvider.
-//   Usa ref.watch(...).valueOrNull?.length ?? 0
+final availableCountProvider = Provider<int>((ref) {
+  return ref.watch(availableBooksProvider).valueOrNull?.length ?? 0;
+});
 
 // ── AsyncNotifier: operaciones CRUD de libros ─────────
 class BooksController extends AsyncNotifier<List<BookEntity>> {
@@ -53,16 +52,31 @@ class BooksController extends AsyncNotifier<List<BookEntity>> {
     required int year,
     required String genre,
   }) async {
-    // TODO L: Llamar sl<BookRepository>().addBook(...)
-    //         Si es Right → actualizar state con AsyncValue.data(nueva lista)
-    //         Si es Left  → lanzar Exception(failure.message)
-    throw UnimplementedError('TODO L: implementar addBook en controller');
+    final result = await sl<BookRepository>().addBook(
+      title: title,
+      author: author,
+      isbn: isbn,
+      year: year,
+      genre: genre,
+    );
+    await result.fold<Future<void>>(
+      (failure) async => throw Exception(failure.message),
+      (_) async {
+        state =
+            AsyncValue.data(await sl<BookRepository>().watchAllBooks().first);
+      },
+    );
   }
 
   Future<void> deleteBook(int id) async {
-    // TODO M: Llamar sl<BookRepository>().deleteBook(id)
-    //         Manejar Right/Left igual que addBook
-    throw UnimplementedError('TODO M: implementar deleteBook en controller');
+    final result = await sl<BookRepository>().deleteBook(id);
+    await result.fold<Future<void>>(
+      (failure) async => throw Exception(failure.message),
+      (_) async {
+        state =
+            AsyncValue.data(await sl<BookRepository>().watchAllBooks().first);
+      },
+    );
   }
 
   // ✅ COMPLETO — refresh forzado
@@ -93,21 +107,35 @@ class LoansController extends AsyncNotifier<List<LoanEntity>> {
     return await sl<LoanRepository>().watchAllLoans().first;
   }
 
-  // TODO N: Implementar createLoan(int bookId, String borrower, DateTime? dueDate)
-  //         Llamar sl<LoanRepository>().createLoan(...)
-  //         Manejar Right/Left (Right → refrescar el estado, Left → throw Exception)
+  // Actualiza el estado solo cuando el repositorio confirma la operacion.
   Future<void> createLoan({
     required int bookId,
     required String borrower,
     DateTime? dueDate,
   }) async {
-    throw UnimplementedError('TODO N: implementar createLoan en LoansController');
+    final result = await sl<LoanRepository>().createLoan(
+      bookId: bookId,
+      borrower: borrower,
+      dueDate: dueDate,
+    );
+    await result.fold<Future<void>>(
+      (failure) async => throw Exception(failure.message),
+      (_) async {
+        state =
+            AsyncValue.data(await sl<LoanRepository>().watchAllLoans().first);
+      },
+    );
   }
 
-  // TODO O: Implementar returnBook(int loanId, int bookId)
-  //         Llamar sl<LoanRepository>().returnBook(loanId, bookId)
   Future<void> returnBook(int loanId, int bookId) async {
-    throw UnimplementedError('TODO O: implementar returnBook en LoansController');
+    final result = await sl<LoanRepository>().returnBook(loanId, bookId);
+    await result.fold<Future<void>>(
+      (failure) async => throw Exception(failure.message),
+      (_) async {
+        state =
+            AsyncValue.data(await sl<LoanRepository>().watchAllLoans().first);
+      },
+    );
   }
 }
 
