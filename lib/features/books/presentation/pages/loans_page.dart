@@ -123,10 +123,15 @@ class _NewLoanDialogState extends ConsumerState<NewLoanDialog> {
       content: SingleChildScrollView(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           DropdownButtonFormField<int>(
+            isExpanded: true,
             initialValue: _bookId,
             decoration: const InputDecoration(labelText: 'Libro disponible *'),
             items: available
-                .map((b) => DropdownMenuItem(value: b.id, child: Text(b.title)))
+                .map((b) => DropdownMenuItem(
+                      value: b.id,
+                      child: Text(b.title,
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ))
                 .toList(),
             onChanged: (v) => setState(() => _bookId = v),
           ),
